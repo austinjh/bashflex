@@ -1,5 +1,6 @@
 declare -a driveseq=(c d e f g h i j k l m)
 declare -a drivesize=(100 100 32)
+declare -a drivesizenew=()
 
 for d in ${!drivesize[@]}
 do
