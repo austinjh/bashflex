@@ -16,13 +16,6 @@ RESOURCE_GROUP=rg-res-dev-research2-camptest-1
 
 az disk list --resource-group $RESOURCE_GROUP --query "[*].{Name:name,Gb:diskSizeGb,Tier:sku.tier}" --output table
 
-for i in ${!disksizesnew[@]} ; do
-    diskname=${diskseq[$i]}
-    disksizenow=$(az disk list --resource-group $RESOURCE_GROUP --query "[?contains(name,'${disknameprefix}${diskname}')].diskSizeGb" --output tsv)
-    echo ${disknameprefix}${diskname} is sized at $disksizenow
-    if (( $disksizenow >= $
-done
-
 if (( ${#disksizesnew[@]} > $DATADISK_MAX )); then
     echo "Error: Maximum disks reached"
     exit 1
@@ -39,6 +32,20 @@ for d in ${!disksizes[@]}; do
         exit 1
     fi
 done
+
+for i in ${!disksizesnew[@]} ; do
+    diskname=${diskseq[$i]}
+    disksizecurrent=$(az disk list --resource-group $RESOURCE_GROUP --query "[?contains(name,'${disknameprefix}${diskname}')].diskSizeGb" --output tsv)
+    disksizeproposed=${disksizesnew[i]}
+    echo ${disknameprefix}${diskname} is sized at $disksizecurrent
+    if (( $disksizeproposed > $$disksizecurrent ))
+    then
+        echo Drive will be expanded from ${disksizecurrent}G to ${disksizeproposed}G
+    else
+        echo NO CHANGE - Drive ${disknameprefix}${diskname} will remain at ${disksizecurrent}G
+    fi
+done
+
 
 for d in ${!disksizes[@]}; do
     echo az vm disk attach \
