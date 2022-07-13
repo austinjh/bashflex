@@ -36,23 +36,14 @@ done
 for i in ${!disksizesnew[@]} ; do
     diskname=${diskseq[$i]}
     disksizecurrent=$(az disk list --resource-group $RESOURCE_GROUP --query "[?contains(name,'${disknameprefix}${diskname}')].diskSizeGb" --output tsv)
-    disksizeproposed=${disksizesnew[i]}
-    echo ${disknameprefix}${diskname} is sized at $disksizecurrent
-    if (( $disksizeproposed > $$disksizecurrent ))
+    disksizeproposed=${disksizesnew[$i]}
+    echo "Test $disksizecurrent $disksizeproposed"
+    # echo ${disknameprefix}${diskname} is sized at $disksizecurrent
+    if (( $disksizeproposed > $disksizecurrent ))
     then
-        echo Drive will be expanded from ${disksizecurrent}G to ${disksizeproposed}G
+        echo "Drive will be expanded from ${disksizecurrent}G to ${disksizeproposed}G"
     else
-        echo NO CHANGE - Drive ${disknameprefix}${diskname} will remain at ${disksizecurrent}G
+        echo "NO CHANGE - Drive ${disknameprefix}${diskname} will remain at ${disksizecurrent}G"
     fi
 done
 
-
-for d in ${!disksizes[@]}; do
-    echo az vm disk attach \
-    --vm-name "${RESOURCE_NAME}" \
-    --resource-group "$NFSSHAREVM_RG" \
-    --name "${RESOURCE_NAME}-dev-sd${diskseq[$d]}" \
-    --size-gb "${disksizes[$d]}" \
-    --sku "$NFS_DATADISK_SKU" \
-    --new
-done
