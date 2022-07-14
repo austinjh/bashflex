@@ -4,9 +4,24 @@ set -e
 # az login
 # az account set --subscription uob-res-dev 
 
+# Functions definitions (Need to be at the top of the file in BASH -\M/- )
+
+function add_pv () {
+    #
+}
+
+function extend_pv () {
+    #
+}
+
+# Globals definitions
+
 declare -a diskseq=(c d e f g h i j k l m o p q r s t u v w x y z)
 declare -a disksizesnew=(100 100)
 declare -a pvgroup=()
+declare -a diskactions=()
+declare -a diskactionsvalue=()
+declare -a diskactionsvol=()
 DATADISK_MAX=16
 DATADISK_MAXSIZE=32768
 disknameprefix="nimbus-dev-camptest-1-dev-sd"
@@ -15,7 +30,11 @@ RESOURCE_GROUP=rg-res-dev-research2-camptest-1
 NFSSHAREVM_RG=$RESOURCE_GROUP
 NFS_DATADISK_SKU=Standard
 
+# Main sequence starts here ------------------------------------------
+
 currentdiskqty=$(az disk list --resource-group $RESOURCE_GROUP --query "[?contains(name,'${disknameprefix}')].{Name:name,Gb:diskSizeGb,Tier:sku.tier}" --output table | grep --count sd)
+
+# Validate inputs are viable for extending the storage allocation
 
 if (( ${#disksizesnew[@]} > $DATADISK_MAX )); then
     echo "Error: Maximum disks reached"
@@ -25,7 +44,6 @@ if (( ${#disksizesnew[@]} < $currentdiskqty )); then
     echo "Error: Unable to provision fewer disks than currently attached"
     exit 3
 fi
-
 re='^[0-9]+$'
 for d in ${!disksizesnew[@]}; do
     if ! [[ ${disksizesnew[$d]} =~ $re ]] ; then
@@ -38,6 +56,8 @@ for d in ${!disksizesnew[@]}; do
     fi
 done
 
+# Loop through each proposed disk size and determine an action plan.
+
 for i in ${!disksizesnew[@]} ; do
     diskname=${diskseq[$i]}
     disksizecurrent=$(az disk list --resource-group $RESOURCE_GROUP --query "[?contains(name,'${disknameprefix}${diskname}')].diskSizeGb" --output tsv)
@@ -45,7 +65,9 @@ for i in ${!disksizesnew[@]} ; do
     if [ -z $disksizecurrent ]
     then
         echo "Disk will be added, size ${disksizeproposed}G"
-        echo az vm disk attach --vm-name ${RESOURCE_NAME} --resource-group $NFSSHAREVM_RG --name ${disknameprefix}${diskname} --size-gb ${disksizeproposed} --sku $NFS_DATADISK_SKU --new
+        #echo az vm disk attach --vm-name ${RESOURCE_NAME} --resource-group $NFSSHAREVM_RG --name ${disknameprefix}${diskname} --size-gb ${disksizeproposed} --sku $NFS_DATADISK_SKU --new
+        diskactions[$i]="Add"
+        diskactionsvalue[$1]=${disksizeproposed}
     else
         if (( $disksizeproposed > $disksizecurrent ))
         then
@@ -59,5 +81,24 @@ for i in ${!disksizesnew[@]} ; do
             fi
         fi
     fi
+done
+
+# Loop through the proposed actions and make the required changes to the disks
+
+for a in ${!diskactions[@]} ; do
+    action=${diskactions[$a]}
+    diskletter=${diskseq[$a]}
+    changesize=${diskactionsvalue[$a]}
+    case $action in
+
+        add)
+        add_pv $diskletter $changesize
+        ;;
+
+        extend)
+        extend_pv $diskletter $changesize
+        ;;
+        
+    esac
 done
 
