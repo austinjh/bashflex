@@ -2,11 +2,11 @@
 set -e
 
 # az login
-# az account set --name uob-res-dev
+# az account set --subscription uob-res-dev 
 
 declare -a diskseq=(c d e f g h i j k l m o p q r s t u v w x y z)
 declare -a disksizes=(100 100 32)
-declare -a disksizesnew=(100 100 64)
+declare -a disksizesnew=(100 100 100 32)
 declare -a pvgroup=()
 DATADISK_MAX=16
 DATADISK_MAXSIZE=32768
@@ -22,12 +22,12 @@ if (( ${#disksizesnew[@]} > $DATADISK_MAX )); then
 fi
 
 re='^[0-9]+$'
-for d in ${!disksizes[@]}; do
-    if ! [[ ${disksizes[$d]} =~ $re ]] ; then
+for d in ${!disksizesnew[@]}; do
+    if ! [[ ${disksizesnew[$d]} =~ $re ]] ; then
         echo "Error: Disk size should be a number in GB"
         exit 1
     fi
-    if (( ${disksizes[$d]} > $DATADISK_MAXSIZE )); then
+    if (( ${disksizesnew[$d]} > $DATADISK_MAXSIZE )); then
         echo "Error: Maximum disk size exceeded"
         exit 1
     fi
@@ -37,13 +37,25 @@ for i in ${!disksizesnew[@]} ; do
     diskname=${diskseq[$i]}
     disksizecurrent=$(az disk list --resource-group $RESOURCE_GROUP --query "[?contains(name,'${disknameprefix}${diskname}')].diskSizeGb" --output tsv)
     disksizeproposed=${disksizesnew[$i]}
-    echo "Test $disksizecurrent $disksizeproposed"
-    # echo ${disknameprefix}${diskname} is sized at $disksizecurrent
-    if (( $disksizeproposed > $disksizecurrent ))
+    #echo "Test $disksizecurrent Current"
+    #echo "Test $disksizeproposed Proposed"
+    #echo ${disknameprefix}${diskname} is sized at $disksizecurrent
+    if [ -z $disksizecurrent ]
     then
-        echo "Drive will be expanded from ${disksizecurrent}G to ${disksizeproposed}G"
+        echo "Disk will be added, size ${disksizeproposed}G"
+        echo az vm disk attach --name ${disknameprefix}${diskname} --resource-group $RESOURCE_GROUP --size-gb $disksizeproposed
     else
-        echo "NO CHANGE - Drive ${disknameprefix}${diskname} will remain at ${disksizecurrent}G"
+        if (( $disksizeproposed > $disksizecurrent ))
+        then
+            echo "Disk will be expanded from ${disksizecurrent}G to ${disksizeproposed}G"
+            echo az disk update --name ${disknameprefix}${diskname} --resource-group $RESOURCE_GROUP --size-gb $disksizeproposed
+        else
+            echo "NO CHANGE - Disk ${disknameprefix}${diskname} will remain at ${disksizecurrent}G"
+            if (( $disksizeproposed < $disksizecurrent )); then
+                echo "Disks are not permmited to be smaller than they are currently"
+                exit 2
+            fi
+        fi
     fi
 done
 
