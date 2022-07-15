@@ -4,16 +4,6 @@ set -e
 # az login
 # az account set --subscription uob-res-dev 
 
-# Functions definitions (Need to be at the top of the file in BASH -\M/- )
-
-function add_pv {
-    echo Add $1 $2
-}
-
-function extend_pv {
-    echo Extend $1 $2
-}
-
 # Globals definitions
 
 declare -a diskseq=(c d e f g h i j k l m o p q r s t u v w x y z)
@@ -26,9 +16,36 @@ DATADISK_MAX=16
 DATADISK_MAXSIZE=32768
 disknameprefix="nimbus-dev-camptest-1-dev-sd"
 RESOURCE_NAME=vm1
+NFSSHAREVM=$RESOURCE_NAME
 RESOURCE_GROUP=rg-res-dev-research2-camptest-1
 NFSSHAREVM_RG=$RESOURCE_GROUP
 NFS_DATADISK_SKU=Standard
+
+
+# Functions definitions (Need to be at the top of the file in BASH -\M/- )
+
+function add_pv {
+    echo Add $1 $2
+    echo az vm disk attach --vm-name ${NFSSHAREVM} --resource-group $NFSSHAREVM_RG --name ${disknameprefix}${1} --size-gb ${2} --sku $NFS_DATADISK_SKU --new
+    echo az vm run-command invoke \
+        --name "$NFSSHAREVM" \
+        --resource-group "$NFSSHAREVM_RG" \
+        --command-id RunShellScript \
+        --scripts "
+            logdir=/usr/local/bath/log
+            mkdir -p \$logdir
+            logfile=\$logdir/campaign-post-deploy.log
+
+            
+
+    "
+
+}
+
+function extend_pv {
+    echo Extend $1 $2
+}
+
 
 # Main sequence starts here ------------------------------------------
 
@@ -67,7 +84,7 @@ for i in ${!disksizesnew[@]} ; do
         echo "Disk will be added, size ${disksizeproposed}G"
         #echo az vm disk attach --vm-name ${RESOURCE_NAME} --resource-group $NFSSHAREVM_RG --name ${disknameprefix}${diskname} --size-gb ${disksizeproposed} --sku $NFS_DATADISK_SKU --new
         diskactions[$i]="Add"
-        diskactionsvalue[$1]=${disksizeproposed}
+        diskactionsvalue[$i]=${disksizeproposed}
     else
         if (( $disksizeproposed > $disksizecurrent ))
         then
