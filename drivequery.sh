@@ -6,18 +6,18 @@ set -e
 
 # Functions definitions (Need to be at the top of the file in BASH -\M/- )
 
-function add_pv () {
-    #
+function add_pv {
+    echo Add $1 $2
 }
 
-function extend_pv () {
-    #
+function extend_pv {
+    echo Extend $1 $2
 }
 
 # Globals definitions
 
 declare -a diskseq=(c d e f g h i j k l m o p q r s t u v w x y z)
-declare -a disksizesnew=(100 100)
+declare -a disksizesnew=(200 100 72 32)
 declare -a pvgroup=()
 declare -a diskactions=()
 declare -a diskactionsvalue=()
@@ -73,6 +73,8 @@ for i in ${!disksizesnew[@]} ; do
         then
             echo "Disk will be expanded from ${disksizecurrent}G to ${disksizeproposed}G"
             echo az disk update --name ${disknameprefix}${diskname} --resource-group $RESOURCE_GROUP --size-gb $disksizeproposed
+            diskactions[$i]="Extend"
+            diskactionsvalue[$i]=${disksizeproposed}
         else
             echo "NO CHANGE - Disk ${disknameprefix}${diskname} will remain at ${disksizecurrent}G"
             if (( $disksizeproposed < $disksizecurrent )); then
@@ -91,14 +93,14 @@ for a in ${!diskactions[@]} ; do
     changesize=${diskactionsvalue[$a]}
     case $action in
 
-        add)
+        Add)
         add_pv $diskletter $changesize
         ;;
 
-        extend)
+        Extend)
         extend_pv $diskletter $changesize
         ;;
-        
+
     esac
 done
 
