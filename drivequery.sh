@@ -36,7 +36,9 @@ function add_pv {
             mkdir -p \$logdir
             logfile=\$logdir/campaign-post-deploy.log
 
-            
+            echo \"Log Start\" > \$logfile
+
+            pvcreate 
 
     "
 
